@@ -36,6 +36,10 @@ from sklearn.feature_selection import SelectKBest, f_classif
 import joblib
 import json
 
+from configs.training import DATA_PATH, RANDOM_STATE
+from src.shared.plotting import save_figure, safe_close
+from src.warning.labels import build_quantile_thresholds, classify_scores
+
 
 class OptimizedWarningSystem:
     """优化版学业预警系统"""
@@ -68,7 +72,7 @@ class OptimizedWarningSystem:
 
         try:
             # 加载原始数据
-            df = pd.read_csv('data/DATA (1).csv')
+            df = pd.read_csv(DATA_PATH)
             print(f"✅ 数据加载成功！形状: {df.shape}")
 
             # 识别目标列
@@ -94,10 +98,9 @@ class OptimizedWarningSystem:
             return None, None, None
 
     def create_risk_categories(self, y):
-        """创建风险类别（优化版）"""
+        """创建风险类别（统一使用共享规则）。"""
         print("\n⚠️ 创建风险类别...")
 
-        # 分析成绩分布
         print("📊 成绩分布统计:")
         print(f"  最小值: {y.min():.2f}")
         print(f"  最大值: {y.max():.2f}")
@@ -107,21 +110,17 @@ class OptimizedWarningSystem:
         print(f"  50%分位数: {np.percentile(y, 50):.2f}")
         print(f"  75%分位数: {np.percentile(y, 75):.2f}")
 
-        # 使用三分类：高风险(<30%)、中风险(30%-70%)、低风险(>70%)
-        low_threshold = np.percentile(y, 30)  # 后30%
-        high_threshold = np.percentile(y, 70)  # 前30%
+        thresholds = build_quantile_thresholds(y)
+        low_threshold = thresholds['low']
+        high_threshold = thresholds['high']
 
         print(f"\n📈 预警阈值:")
         print(f"  🔴 高风险: 成绩 < {low_threshold:.2f} (后30%)")
-        print(f"  🟡 中风险: {low_threshold:.2f} ≤ 成绩 ≤ {high_threshold:.2f}")
-        print(f"  🟢 低风险: 成绩 > {high_threshold:.2f} (前30%)")
+        print(f"  🟡 中风险: {low_threshold:.2f} ≤ 成绩 < {high_threshold:.2f}")
+        print(f"  🟢 低风险: 成绩 ≥ {high_threshold:.2f} (前30%)")
 
-        # 创建分类标签
-        y_class = pd.cut(y,
-                         bins=[-np.inf, low_threshold, high_threshold, np.inf],
-                         labels=['高风险', '中风险', '低风险'])
+        y_class = classify_scores(y, thresholds)
 
-        # 统计类别分布
         class_counts = y_class.value_counts()
         print(f"\n📊 风险类别分布:")
         for risk_level in ['高风险', '中风险', '低风险']:
@@ -129,10 +128,8 @@ class OptimizedWarningSystem:
             percentage = count / len(y) * 100
             print(f"  {risk_level}: {count}人 ({percentage:.1f}%)")
 
-        # 可视化分布
         self.plot_risk_distribution(y_class)
-
-        return y_class, {'low': low_threshold, 'high': high_threshold}
+        return y_class, thresholds
 
     def plot_risk_distribution(self, y_class):
         """可视化风险分布"""
@@ -160,8 +157,8 @@ class OptimizedWarningSystem:
         plt.title('风险类别占比')
 
         plt.tight_layout()
-        plt.savefig('reports/warning_optimized/risk_distribution.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/warning_optimized/risk_distribution.png')
+        safe_close(plt.gcf())
         print("📊 风险分布图已保存")
 
     def select_features(self, X, y_class, k=10):
@@ -210,8 +207,8 @@ class OptimizedWarningSystem:
             plt.text(score, i, f' {score:.2f}', va='center')
 
         plt.tight_layout()
-        plt.savefig('reports/warning_optimized/feature_importance.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/warning_optimized/feature_importance.png')
+        safe_close(plt.gcf())
 
         print(f"🏆 最重要的特征: {sorted_features[0]} (分数: {sorted_scores[0]:.2f})")
 
@@ -221,7 +218,7 @@ class OptimizedWarningSystem:
 
         # 划分训练集和测试集（分层抽样）
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y_class, test_size=0.2, random_state=42, stratify=y_class
+            X, y_class, test_size=0.2, random_state=RANDOM_STATE, stratify=y_class
         )
 
         print(f"📊 数据集划分:")
@@ -238,7 +235,7 @@ class OptimizedWarningSystem:
                 C=0.1,  # 强正则化
                 max_iter=1000,
                 class_weight='balanced',  # 处理类别不平衡
-                random_state=42
+                random_state=RANDOM_STATE
             ),
             '随机森林_优化': RandomForestClassifier(
                 n_estimators=50,  # 减少树的数量
@@ -246,7 +243,7 @@ class OptimizedWarningSystem:
                 min_samples_split=10,  # 增加分裂最小样本
                 min_samples_leaf=5,  # 增加叶节点最小样本
                 class_weight='balanced',
-                random_state=42,
+                random_state=RANDOM_STATE,
                 n_jobs=-1
             ),
             '梯度提升_优化': GradientBoostingClassifier(
@@ -254,7 +251,7 @@ class OptimizedWarningSystem:
                 max_depth=3,
                 learning_rate=0.1,
                 subsample=0.8,  # 使用子采样减少过拟合
-                random_state=42
+                random_state=RANDOM_STATE
             ),
             'K近邻_优化': KNeighborsClassifier(
                 n_neighbors=7,  # 增加邻居数
@@ -287,7 +284,7 @@ class OptimizedWarningSystem:
                 # 交叉验证
                 cv_scores = cross_val_score(
                     model, X_train_scaled, y_train,
-                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),
+                    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
                     scoring='accuracy',
                     n_jobs=-1
                 )
@@ -448,8 +445,8 @@ class OptimizedWarningSystem:
         ax4.axhline(y=0.5, color='red', linestyle='--', alpha=0.5)
 
         plt.tight_layout()
-        plt.savefig('reports/warning_optimized/model_comparison.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/warning_optimized/model_comparison.png')
+        safe_close(plt.gcf())
         print("📊 模型比较图已保存")
 
     def plot_confusion_matrix(self, y_true, y_pred):
@@ -465,8 +462,8 @@ class OptimizedWarningSystem:
         plt.xlabel('预测标签')
 
         plt.tight_layout()
-        plt.savefig('reports/warning_optimized/confusion_matrix.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/warning_optimized/confusion_matrix.png')
+        safe_close(plt.gcf())
         print("📊 混淆矩阵已保存")
 
     def identify_high_risk_students(self, X_all, student_ids=None, top_n=15):
@@ -603,8 +600,8 @@ class OptimizedWarningSystem:
         plt.grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.savefig('reports/warning_optimized/high_risk_analysis.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/warning_optimized/high_risk_analysis.png')
+        safe_close(plt.gcf())
         print("📊 高风险学生分析图已保存")
 
     def save_models_and_results(self):
