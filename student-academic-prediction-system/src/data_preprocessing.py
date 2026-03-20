@@ -10,17 +10,8 @@ from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings('ignore')
 
-
-# 尝试从config导入，如果失败则使用默认值
-try:
-    from config import *
-except ImportError:
-    print("警告：使用默认配置")
-    DATA_PATH = "data/DATA (1).csv"
-    FEATURE_COLUMNS = [str(i) for i in range(1, 31)]
-    TARGET_COLUMN = "GRADE"
-    TEST_SIZE = 0.2
-    RANDOM_STATE = 42
+from configs.training import DATA_PATH, TARGET_COLUMN, TEST_SIZE, RANDOM_STATE, FEATURE_NAMES
+from src.shared.io import load_csv
 
 class DataPreprocessor:
     """数据预处理器 - 阶段1简化版"""
@@ -34,14 +25,7 @@ class DataPreprocessor:
         filepath = filepath or DATA_PATH
 
         try:
-            # 尝试不同编码
-            try:
-                df = pd.read_csv(filepath, encoding='utf-8')
-            except:
-                try:
-                    df = pd.read_csv(filepath, encoding='gbk')
-                except:
-                    df = pd.read_csv(filepath, encoding='latin1')
+            df = load_csv(filepath)
 
             print(f"✅ 数据加载成功！形状: {df.shape}")
             print(f"📊 数据预览:")
@@ -127,16 +111,10 @@ class DataPreprocessor:
             print(f"🤔 推断目标列为: {target_col}")
 
         # 3. 识别特征列
-        # 如果提供了特征列配置，使用配置
-        if 'FEATURE_COLUMNS' in globals():
-            feature_cols = [col for col in FEATURE_COLUMNS if col in df_clean.columns]
-        else:
-            # 自动识别：排除目标列和非数值列
-            feature_cols = [col for col in df_clean.columns if col != target_col]
-            # 优先选择数值列
-            numeric_features = df_clean[feature_cols].select_dtypes(include=[np.number]).columns
-            if len(numeric_features) > 5:  # 如果有足够多的数值特征
-                feature_cols = list(numeric_features)
+        feature_cols = [col for col in df_clean.columns if col != target_col]
+        numeric_features = df_clean[feature_cols].select_dtypes(include=[np.number]).columns
+        if len(numeric_features) > 5:  # 如果有足够多的数值特征
+            feature_cols = list(numeric_features)
 
         print(f"🔢 识别到 {len(feature_cols)} 个特征列")
 
@@ -188,8 +166,8 @@ class DataPreprocessor:
                 median_val = df_clean[target_col].median()
                 df_clean[target_col] = df_clean[target_col].fillna(median_val)
                 print(f"✅ 目标列已转换为数值类型")
-            except:
-                print("⚠️  无法转换为数值，保持原样")
+            except (TypeError, ValueError) as exc:
+                print(f"⚠️  无法转换为数值，保持原样: {exc}")
 
         # 保存清洗后的数据
         self.clean_df = df_clean
