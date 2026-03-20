@@ -12,8 +12,7 @@
 ## 当前正式入口
 
 - 回归训练：`run.py`
-- 预警训练：`run_warning.py`（推荐）
-- 兼容入口：`run_warning_optimized.py`
+- 预警训练：`run_warning_optimized.py`
 - Web 应用：`app/run_web.py`
 
 ## 当前目录结构
@@ -40,18 +39,11 @@ student-academic-prediction-system/
 │   │   ├── pipeline.py
 │   │   └── trainer.py
 │   ├── shared/
-│   │   ├── artifacts.py
 │   │   ├── io.py
 │   │   ├── paths.py
 │   │   └── plotting.py
-│   ├── web/
-│   │   └── view_models.py
 │   ├── warning/
-│   │   ├── features.py
-│   │   ├── labels.py
-│   │   ├── pipeline.py
-│   │   ├── reporting.py
-│   │   └── trainer.py
+│   │   └── labels.py
 │   ├── basic_models.py
 │   ├── data_preprocessing.py
 │   └── utils.py
@@ -75,7 +67,7 @@ python run.py
 ### 2. 预警训练
 
 ```bash
-python run_warning.py
+python run_warning_optimized.py
 ```
 
 ### 3. Web 页面
@@ -96,21 +88,13 @@ python run_web.py
 
 ### 风险映射统一来源
 
-- 风险分类共享函数：`src/warning/labels.py`
-- 预警训练编排：`src/warning/pipeline.py`
-- 预警特征选择/训练/报告：`src/warning/features.py`、`src/warning/trainer.py`、`src/warning/reporting.py`
+- 共享函数：`src/warning/labels.py`
+- Web 与训练都必须通过这个模块进行高/中/低风险分类。
 
 ### 绘图约束
 
 - 所有训练流程只允许保存图片，不直接调用 `plt.show()`。
 - 统一保存工具在 `src/shared/plotting.py`。
-
-### 产物清单（Manifest）
-
-- 预警训练会输出 `models/warning_optimized/manifest.json`。
-- 回归训练会输出 `models/regression_manifest.json`。
-- Web 会优先读取 manifest，再回退到 `configs/web.py` 中的默认路径。
-- `app/web_app.py` 中的资源解析、仪表板摘要、数据概览和学生管理结果拼装已逐步抽到 `src/web/view_models.py`。
 
 ## 实验脚本说明
 
