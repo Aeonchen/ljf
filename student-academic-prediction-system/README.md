@@ -98,13 +98,13 @@ python run_web.py
 
 ## 实验脚本说明
 
-以下脚本视为实验或历史实现，后续应迁入 `experiments/`：
+实验脚本已经按职责收敛到 `experiments/` 目录：
 
-- `run_stage2.py`
-- `run_stage3_optimized.py`
-- `run_improved_warning.py`
-- `binary_classification.py`
-- `check_features.py`
-- `simple_feature_engineering.py`
+- `experiments/regression/run_stage2.py`
+- `experiments/warning/run_stage3_optimized.py`
+- `experiments/warning/run_improved_warning.py`
+- `experiments/warning/binary_classification.py`
+- `experiments/analysis/check_features.py`
+- `experiments/analysis/simple_feature_engineering.py`
 
-在第一阶段结束前，这些脚本仍保留在原位置以确保兼容。
+为了兼容旧命令，仓库根目录仍保留同名薄包装脚本，它们会转发到 `experiments/` 中的真实实现。
