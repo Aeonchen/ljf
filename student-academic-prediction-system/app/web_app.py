@@ -22,7 +22,7 @@ if str(PROJECT_ROOT / 'src') not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT / 'src'))
 
 from configs.web import APP_CONFIG, MODEL_CONFIG
-from src.web.view_models import build_dashboard_summary, load_app_resources, resolve_resource_paths
+from src.warning.labels import build_fixed_thresholds, summarize_risk_levels
 
 # 页面配置
 st.set_page_config(
@@ -85,9 +85,33 @@ def load_resources():
     resources = {}
 
     try:
-        resources = load_app_resources(PROJECT_ROOT, MODEL_CONFIG)
-        for level, message in resources.get('_status', []):
-            getattr(st, level)(message)
+        # 加载模型
+        model_path = PROJECT_ROOT / MODEL_CONFIG['model_path']
+        scaler_path = PROJECT_ROOT / MODEL_CONFIG['scaler_path']
+
+        if os.path.exists(model_path):
+            resources['model'] = joblib.load(model_path)
+            st.success(f"✅ 模型加载成功: {type(resources['model']).__name__}")
+        else:
+            st.warning("⚠️ 模型文件不存在，请先运行训练脚本")
+
+        if os.path.exists(scaler_path):
+            resources['scaler'] = joblib.load(scaler_path)
+            st.success("✅ 标准化器加载成功")
+
+        # 加载数据
+        data_path = PROJECT_ROOT / MODEL_CONFIG['data_path']
+        if os.path.exists(data_path):
+            resources['data'] = pd.read_csv(data_path)
+            st.success(f"✅ 数据加载成功: {resources['data'].shape[0]} 个样本")
+
+        # 加载报告
+        report_path = PROJECT_ROOT / MODEL_CONFIG['report_path']
+        if os.path.exists(report_path):
+            with open(report_path, 'r', encoding='utf-8') as f:
+                resources['report'] = f.read()
+            st.success("✅ 报告加载成功")
+
     except Exception as e:
         st.error(f"❌ 加载资源时出错: {str(e)}")
 
@@ -108,7 +132,7 @@ with st.sidebar:
     st.markdown("### 📊 系统状态")
 
     # 显示系统状态
-    model_path = resolve_resource_paths(PROJECT_ROOT, MODEL_CONFIG)['model_path']
+    model_path = PROJECT_ROOT / MODEL_CONFIG['model_path']
     if model_path.exists():
         model_age = datetime.fromtimestamp(model_path.stat().st_mtime)
         st.info(f"📅 模型更新时间: {model_age.strftime('%Y-%m-%d %H:%M')}")
@@ -130,9 +154,8 @@ if page == "📊 仪表板":
     if 'data' in resources and 'model' in resources:
         df = resources['data']
         model = resources['model']
-        dashboard_summary = build_dashboard_summary(df)
-        risk_labels = dashboard_summary['risk_labels']
-        risk_counts = dashboard_summary['risk_counts']
+        thresholds = build_fixed_thresholds()
+        risk_labels, risk_counts = summarize_risk_levels(df['GRADE'], thresholds)
 
         # 关键指标
         col1, col2, col3, col4 = st.columns(4)
@@ -143,19 +166,19 @@ if page == "📊 仪表板":
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            avg_grade = dashboard_summary['avg_grade']
+            avg_grade = df['GRADE'].mean()
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("平均成绩", f"{avg_grade:.2f}分")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
-            high_risk_count = dashboard_summary['high_risk_count']
+            high_risk_count = int(risk_counts['高风险'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("高风险学生", f"{high_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
-            low_risk_count = dashboard_summary['low_risk_count']
+            low_risk_count = int(risk_counts['低风险'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("低风险学生", f"{low_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
