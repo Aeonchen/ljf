@@ -8,13 +8,31 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import joblib
 from datetime import datetime
-import os
+import sys
+from pathlib import Path
+
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / 'src') not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / 'src'))
+
+from configs.web import APP_CONFIG, MODEL_CONFIG
+from src.web.view_models import (
+    build_dashboard_summary,
+    build_data_overview,
+    build_feature_relationship,
+    build_student_management_view,
+    get_feature_columns,
+    load_app_resources,
+    resolve_resource_paths,
+)
 
 # 页面配置
 st.set_page_config(
-    page_title="学生学业预警系统",
+    page_title=APP_CONFIG['title'],
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -73,33 +91,9 @@ def load_resources():
     resources = {}
 
     try:
-        # 加载模型
-        model_path = 'models/warning_optimized/best_model.pkl'
-        scaler_path = 'models/warning_optimized/scaler.pkl'
-
-        if os.path.exists(model_path):
-            resources['model'] = joblib.load(model_path)
-            st.success(f"✅ 模型加载成功: {type(resources['model']).__name__}")
-        else:
-            st.warning("⚠️ 模型文件不存在，请先运行训练脚本")
-
-        if os.path.exists(scaler_path):
-            resources['scaler'] = joblib.load(scaler_path)
-            st.success("✅ 标准化器加载成功")
-
-        # 加载数据
-        data_path = 'data/DATA (1).csv'
-        if os.path.exists(data_path):
-            resources['data'] = pd.read_csv(data_path)
-            st.success(f"✅ 数据加载成功: {resources['data'].shape[0]} 个样本")
-
-        # 加载报告
-        report_path = 'reports/warning_optimized/detailed_report.md'
-        if os.path.exists(report_path):
-            with open(report_path, 'r', encoding='utf-8') as f:
-                resources['report'] = f.read()
-            st.success("✅ 报告加载成功")
-
+        resources = load_app_resources(PROJECT_ROOT, MODEL_CONFIG)
+        for level, message in resources.get('_status', []):
+            getattr(st, level)(message)
     except Exception as e:
         st.error(f"❌ 加载资源时出错: {str(e)}")
 
@@ -120,8 +114,9 @@ with st.sidebar:
     st.markdown("### 📊 系统状态")
 
     # 显示系统状态
-    if os.path.exists('models/warning_optimized/best_model.pkl'):
-        model_age = datetime.fromtimestamp(os.path.getmtime('models/warning_optimized/best_model.pkl'))
+    model_path = resolve_resource_paths(PROJECT_ROOT, MODEL_CONFIG)['model_path']
+    if model_path.exists():
+        model_age = datetime.fromtimestamp(model_path.stat().st_mtime)
         st.info(f"📅 模型更新时间: {model_age.strftime('%Y-%m-%d %H:%M')}")
 
     st.markdown("---")
@@ -141,6 +136,8 @@ if page == "📊 仪表板":
     if 'data' in resources and 'model' in resources:
         df = resources['data']
         model = resources['model']
+        dashboard_summary = build_dashboard_summary(df)
+        risk_labels = dashboard_summary['risk_labels']
 
         # 关键指标
         col1, col2, col3, col4 = st.columns(4)
@@ -151,19 +148,19 @@ if page == "📊 仪表板":
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            avg_grade = df['GRADE'].mean()
+            avg_grade = dashboard_summary['avg_grade']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("平均成绩", f"{avg_grade:.2f}分")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
-            high_risk_count = len(df[df['GRADE'] < 2])  # 成绩<2为高风险
+            high_risk_count = dashboard_summary['high_risk_count']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("高风险学生", f"{high_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
-            low_risk_count = len(df[df['GRADE'] > 5])  # 成绩>5为低风险
+            low_risk_count = dashboard_summary['low_risk_count']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("低风险学生", f"{low_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
@@ -184,16 +181,7 @@ if page == "📊 仪表板":
 
         with col2:
             # 风险类别分布
-            risk_categories = []
-            for grade in df['GRADE']:
-                if grade < 2:
-                    risk_categories.append('高风险')
-                elif grade < 5:
-                    risk_categories.append('中风险')
-                else:
-                    risk_categories.append('低风险')
-
-            risk_counts = pd.Series(risk_categories).value_counts()
+            risk_counts = risk_labels.value_counts().reindex(['高风险', '中风险', '低风险'], fill_value=0)
 
             fig, ax = plt.subplots(figsize=(8, 8))
             colors = ['#EF4444', '#F59E0B', '#10B981']
@@ -243,17 +231,19 @@ elif page == "📈 数据分析":
 
         with col2:
             st.write("**数据统计:**")
-            st.write(f"- 总行数: {df.shape[0]}")
-            st.write(f"- 总列数: {df.shape[1]}")
-            st.write(f"- 成绩范围: {df['GRADE'].min():.1f} - {df['GRADE'].max():.1f}")
-            st.write(f"- 缺失值: {df.isnull().sum().sum()}")
+            data_overview = build_data_overview(df)
+            st.write(f"- 总行数: {data_overview['row_count']}")
+            st.write(f"- 总列数: {data_overview['column_count']}")
+            st.write(f"- 成绩范围: {data_overview['grade_min']:.1f} - {data_overview['grade_max']:.1f}")
+            st.write(f"- 缺失值: {data_overview['missing_count']}")
 
         # 特征选择分析
         st.markdown('<h3 class="sub-header">🔍 特征与成绩关系</h3>', unsafe_allow_html=True)
 
         # 选择要分析的特征
-        feature_columns = [col for col in df.columns if col not in ['GRADE', 'STUDENT ID', 'COURSE ID']]
+        feature_columns = get_feature_columns(df)
         selected_feature = st.selectbox("选择要分析的特征", feature_columns[:10])
+        relationship = build_feature_relationship(df, selected_feature)
 
         # 绘制散点图
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -263,11 +253,14 @@ elif page == "📈 数据分析":
         ax.set_title(f'{selected_feature} 与成绩的关系')
 
         # 添加回归线
-        if len(df[selected_feature].unique()) > 1:
-            z = np.polyfit(df[selected_feature], df['GRADE'], 1)
-            p = np.poly1d(z)
-            ax.plot(sorted(df[selected_feature]), p(sorted(df[selected_feature])),
-                    "r--", alpha=0.8, label=f"相关性: {df[selected_feature].corr(df['GRADE']):.3f}")
+        if relationship['trendline_x'] is not None:
+            ax.plot(
+                relationship['trendline_x'],
+                relationship['trendline_y'],
+                "r--",
+                alpha=0.8,
+                label=f"相关性: {relationship['correlation']:.3f}"
+            )
             ax.legend()
 
         ax.grid(True, alpha=0.3)
@@ -420,38 +413,17 @@ elif page == "👥 学生管理":
 
     if 'data' in resources and 'model' in resources:
         df = resources['data']
-        model = resources['model']
-        scaler = resources['scaler']
+        management_view = build_student_management_view(
+            df,
+            resources['model'],
+            resources['scaler'],
+            num_high_risk,
+        )
+        results_df = management_view['results_df']
+        high_risk_df = management_view['high_risk_df']
 
         # 计算所有学生的风险
         st.markdown('<h3 class="sub-header">🚨 高风险学生名单</h3>', unsafe_allow_html=True)
-
-        # 准备特征（假设前30列是特征）
-        feature_cols = [col for col in df.columns if col not in ['GRADE', 'STUDENT ID', 'COURSE ID']]
-        X = df[feature_cols[:10]]  # 使用前10个特征
-
-        # 标准化
-        X_scaled = scaler.transform(X)
-
-        # 预测
-        predictions = model.predict(X_scaled)
-        probabilities = model.predict_proba(X_scaled)
-
-        # 添加预测结果到DataFrame
-        results_df = df.copy()
-        results_df['预测风险等级'] = predictions
-
-        # 获取高风险概率
-        if '高风险' in model.classes_:
-            high_risk_idx = list(model.classes_).index('高风险')
-            results_df['高风险概率'] = probabilities[:, high_risk_idx]
-        else:
-            results_df['高风险概率'] = probabilities[:, 0]
-
-        # 筛选高风险学生
-        high_risk_df = results_df[results_df['预测风险等级'] == '高风险'].sort_values(
-            '高风险概率', ascending=False
-        ).head(num_high_risk)
 
         # 显示高风险学生表格
         if len(high_risk_df) > 0:
