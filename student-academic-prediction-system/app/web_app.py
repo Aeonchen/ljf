@@ -11,10 +11,23 @@ import seaborn as sns
 import joblib
 from datetime import datetime
 import os
+import sys
+from pathlib import Path
+
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / 'src') not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / 'src'))
+
+from configs.web import APP_CONFIG, MODEL_CONFIG
+from src.shared.artifacts import load_manifest
+from src.warning.labels import build_fixed_thresholds, summarize_risk_levels
 
 # 页面配置
 st.set_page_config(
-    page_title="学生学业预警系统",
+    page_title=APP_CONFIG['title'],
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -66,6 +79,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def resolve_resource_paths():
+    manifest_path = PROJECT_ROOT / MODEL_CONFIG['manifest_path']
+    manifest = load_manifest(manifest_path)
+    if manifest is not None:
+        return {
+            'manifest': manifest,
+            'model_path': PROJECT_ROOT / manifest.get('model_path', MODEL_CONFIG['model_path']),
+            'scaler_path': PROJECT_ROOT / manifest.get('scaler_path', MODEL_CONFIG['scaler_path']),
+            'data_path': PROJECT_ROOT / manifest.get('data_path', MODEL_CONFIG['data_path']),
+            'report_path': PROJECT_ROOT / manifest.get('report_path', MODEL_CONFIG['report_path']),
+        }
+    return {
+        'manifest': None,
+        'model_path': PROJECT_ROOT / MODEL_CONFIG['model_path'],
+        'scaler_path': PROJECT_ROOT / MODEL_CONFIG['scaler_path'],
+        'data_path': PROJECT_ROOT / MODEL_CONFIG['data_path'],
+        'report_path': PROJECT_ROOT / MODEL_CONFIG['report_path'],
+    }
+
+
 # 加载数据和模型
 @st.cache_resource
 def load_resources():
@@ -73,9 +106,12 @@ def load_resources():
     resources = {}
 
     try:
+        resolved_paths = resolve_resource_paths()
+        resources['manifest'] = resolved_paths['manifest']
+
         # 加载模型
-        model_path = 'models/warning_optimized/best_model.pkl'
-        scaler_path = 'models/warning_optimized/scaler.pkl'
+        model_path = resolved_paths['model_path']
+        scaler_path = resolved_paths['scaler_path']
 
         if os.path.exists(model_path):
             resources['model'] = joblib.load(model_path)
@@ -88,13 +124,13 @@ def load_resources():
             st.success("✅ 标准化器加载成功")
 
         # 加载数据
-        data_path = 'data/DATA (1).csv'
+        data_path = resolved_paths['data_path']
         if os.path.exists(data_path):
             resources['data'] = pd.read_csv(data_path)
             st.success(f"✅ 数据加载成功: {resources['data'].shape[0]} 个样本")
 
         # 加载报告
-        report_path = 'reports/warning_optimized/detailed_report.md'
+        report_path = resolved_paths['report_path']
         if os.path.exists(report_path):
             with open(report_path, 'r', encoding='utf-8') as f:
                 resources['report'] = f.read()
@@ -120,8 +156,9 @@ with st.sidebar:
     st.markdown("### 📊 系统状态")
 
     # 显示系统状态
-    if os.path.exists('models/warning_optimized/best_model.pkl'):
-        model_age = datetime.fromtimestamp(os.path.getmtime('models/warning_optimized/best_model.pkl'))
+    model_path = resolve_resource_paths()['model_path']
+    if model_path.exists():
+        model_age = datetime.fromtimestamp(model_path.stat().st_mtime)
         st.info(f"📅 模型更新时间: {model_age.strftime('%Y-%m-%d %H:%M')}")
 
     st.markdown("---")
@@ -141,6 +178,8 @@ if page == "📊 仪表板":
     if 'data' in resources and 'model' in resources:
         df = resources['data']
         model = resources['model']
+        thresholds = build_fixed_thresholds()
+        risk_labels, risk_counts = summarize_risk_levels(df['GRADE'], thresholds)
 
         # 关键指标
         col1, col2, col3, col4 = st.columns(4)
@@ -157,13 +196,13 @@ if page == "📊 仪表板":
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
-            high_risk_count = len(df[df['GRADE'] < 2])  # 成绩<2为高风险
+            high_risk_count = int(risk_counts['高风险'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("高风险学生", f"{high_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
-            low_risk_count = len(df[df['GRADE'] > 5])  # 成绩>5为低风险
+            low_risk_count = int(risk_counts['低风险'])
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("低风险学生", f"{low_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
@@ -184,16 +223,7 @@ if page == "📊 仪表板":
 
         with col2:
             # 风险类别分布
-            risk_categories = []
-            for grade in df['GRADE']:
-                if grade < 2:
-                    risk_categories.append('高风险')
-                elif grade < 5:
-                    risk_categories.append('中风险')
-                else:
-                    risk_categories.append('低风险')
-
-            risk_counts = pd.Series(risk_categories).value_counts()
+            risk_counts = risk_labels.value_counts().reindex(['高风险', '中风险', '低风险'], fill_value=0)
 
             fig, ax = plt.subplots(figsize=(8, 8))
             colors = ['#EF4444', '#F59E0B', '#10B981']
