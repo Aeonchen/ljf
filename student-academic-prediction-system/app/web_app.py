@@ -22,7 +22,6 @@ if str(PROJECT_ROOT / 'src') not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT / 'src'))
 
 from configs.web import APP_CONFIG, MODEL_CONFIG
-from src.shared.artifacts import load_manifest
 from src.warning.labels import build_fixed_thresholds, summarize_risk_levels
 
 # 页面配置
@@ -79,26 +78,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def resolve_resource_paths():
-    manifest_path = PROJECT_ROOT / MODEL_CONFIG['manifest_path']
-    manifest = load_manifest(manifest_path)
-    if manifest is not None:
-        return {
-            'manifest': manifest,
-            'model_path': PROJECT_ROOT / manifest.get('model_path', MODEL_CONFIG['model_path']),
-            'scaler_path': PROJECT_ROOT / manifest.get('scaler_path', MODEL_CONFIG['scaler_path']),
-            'data_path': PROJECT_ROOT / manifest.get('data_path', MODEL_CONFIG['data_path']),
-            'report_path': PROJECT_ROOT / manifest.get('report_path', MODEL_CONFIG['report_path']),
-        }
-    return {
-        'manifest': None,
-        'model_path': PROJECT_ROOT / MODEL_CONFIG['model_path'],
-        'scaler_path': PROJECT_ROOT / MODEL_CONFIG['scaler_path'],
-        'data_path': PROJECT_ROOT / MODEL_CONFIG['data_path'],
-        'report_path': PROJECT_ROOT / MODEL_CONFIG['report_path'],
-    }
-
-
 # 加载数据和模型
 @st.cache_resource
 def load_resources():
@@ -106,12 +85,9 @@ def load_resources():
     resources = {}
 
     try:
-        resolved_paths = resolve_resource_paths()
-        resources['manifest'] = resolved_paths['manifest']
-
         # 加载模型
-        model_path = resolved_paths['model_path']
-        scaler_path = resolved_paths['scaler_path']
+        model_path = PROJECT_ROOT / MODEL_CONFIG['model_path']
+        scaler_path = PROJECT_ROOT / MODEL_CONFIG['scaler_path']
 
         if os.path.exists(model_path):
             resources['model'] = joblib.load(model_path)
@@ -124,13 +100,13 @@ def load_resources():
             st.success("✅ 标准化器加载成功")
 
         # 加载数据
-        data_path = resolved_paths['data_path']
+        data_path = PROJECT_ROOT / MODEL_CONFIG['data_path']
         if os.path.exists(data_path):
             resources['data'] = pd.read_csv(data_path)
             st.success(f"✅ 数据加载成功: {resources['data'].shape[0]} 个样本")
 
         # 加载报告
-        report_path = resolved_paths['report_path']
+        report_path = PROJECT_ROOT / MODEL_CONFIG['report_path']
         if os.path.exists(report_path):
             with open(report_path, 'r', encoding='utf-8') as f:
                 resources['report'] = f.read()
@@ -156,7 +132,7 @@ with st.sidebar:
     st.markdown("### 📊 系统状态")
 
     # 显示系统状态
-    model_path = resolve_resource_paths()['model_path']
+    model_path = PROJECT_ROOT / MODEL_CONFIG['model_path']
     if model_path.exists():
         model_age = datetime.fromtimestamp(model_path.stat().st_mtime)
         st.info(f"📅 模型更新时间: {model_age.strftime('%Y-%m-%d %H:%M')}")
