@@ -11,10 +11,22 @@ import seaborn as sns
 import joblib
 from datetime import datetime
 import os
+import sys
+from pathlib import Path
+
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / 'src') not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / 'src'))
+
+from configs.web import APP_CONFIG, MODEL_CONFIG
+from src.web.view_models import build_dashboard_summary, load_app_resources, resolve_resource_paths
 
 # 页面配置
 st.set_page_config(
-    page_title="学生学业预警系统",
+    page_title=APP_CONFIG['title'],
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -73,33 +85,9 @@ def load_resources():
     resources = {}
 
     try:
-        # 加载模型
-        model_path = 'models/warning_optimized/best_model.pkl'
-        scaler_path = 'models/warning_optimized/scaler.pkl'
-
-        if os.path.exists(model_path):
-            resources['model'] = joblib.load(model_path)
-            st.success(f"✅ 模型加载成功: {type(resources['model']).__name__}")
-        else:
-            st.warning("⚠️ 模型文件不存在，请先运行训练脚本")
-
-        if os.path.exists(scaler_path):
-            resources['scaler'] = joblib.load(scaler_path)
-            st.success("✅ 标准化器加载成功")
-
-        # 加载数据
-        data_path = 'data/DATA (1).csv'
-        if os.path.exists(data_path):
-            resources['data'] = pd.read_csv(data_path)
-            st.success(f"✅ 数据加载成功: {resources['data'].shape[0]} 个样本")
-
-        # 加载报告
-        report_path = 'reports/warning_optimized/detailed_report.md'
-        if os.path.exists(report_path):
-            with open(report_path, 'r', encoding='utf-8') as f:
-                resources['report'] = f.read()
-            st.success("✅ 报告加载成功")
-
+        resources = load_app_resources(PROJECT_ROOT, MODEL_CONFIG)
+        for level, message in resources.get('_status', []):
+            getattr(st, level)(message)
     except Exception as e:
         st.error(f"❌ 加载资源时出错: {str(e)}")
 
@@ -120,8 +108,9 @@ with st.sidebar:
     st.markdown("### 📊 系统状态")
 
     # 显示系统状态
-    if os.path.exists('models/warning_optimized/best_model.pkl'):
-        model_age = datetime.fromtimestamp(os.path.getmtime('models/warning_optimized/best_model.pkl'))
+    model_path = resolve_resource_paths(PROJECT_ROOT, MODEL_CONFIG)['model_path']
+    if model_path.exists():
+        model_age = datetime.fromtimestamp(model_path.stat().st_mtime)
         st.info(f"📅 模型更新时间: {model_age.strftime('%Y-%m-%d %H:%M')}")
 
     st.markdown("---")
@@ -141,6 +130,9 @@ if page == "📊 仪表板":
     if 'data' in resources and 'model' in resources:
         df = resources['data']
         model = resources['model']
+        dashboard_summary = build_dashboard_summary(df)
+        risk_labels = dashboard_summary['risk_labels']
+        risk_counts = dashboard_summary['risk_counts']
 
         # 关键指标
         col1, col2, col3, col4 = st.columns(4)
@@ -151,19 +143,19 @@ if page == "📊 仪表板":
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            avg_grade = df['GRADE'].mean()
+            avg_grade = dashboard_summary['avg_grade']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("平均成绩", f"{avg_grade:.2f}分")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
-            high_risk_count = len(df[df['GRADE'] < 2])  # 成绩<2为高风险
+            high_risk_count = dashboard_summary['high_risk_count']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("高风险学生", f"{high_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
-            low_risk_count = len(df[df['GRADE'] > 5])  # 成绩>5为低风险
+            low_risk_count = dashboard_summary['low_risk_count']
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("低风险学生", f"{low_risk_count}人")
             st.markdown('</div>', unsafe_allow_html=True)
@@ -184,16 +176,7 @@ if page == "📊 仪表板":
 
         with col2:
             # 风险类别分布
-            risk_categories = []
-            for grade in df['GRADE']:
-                if grade < 2:
-                    risk_categories.append('高风险')
-                elif grade < 5:
-                    risk_categories.append('中风险')
-                else:
-                    risk_categories.append('低风险')
-
-            risk_counts = pd.Series(risk_categories).value_counts()
+            risk_counts = risk_labels.value_counts().reindex(['高风险', '中风险', '低风险'], fill_value=0)
 
             fig, ax = plt.subplots(figsize=(8, 8))
             colors = ['#EF4444', '#F59E0B', '#10B981']
