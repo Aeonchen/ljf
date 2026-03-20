@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns  # 添加这行！
+
+from src.shared.io import load_json, load_pickle, save_json, save_pickle
+from src.shared.paths import ensure_directories
+from src.shared.plotting import save_figure, safe_close
 from datetime import datetime
 import warnings
 
@@ -18,20 +22,15 @@ warnings.filterwarnings('ignore')
 def create_project_structure():
     """创建项目目录结构"""
     directories = [
-        'data',
-        'models',
-        'reports',
-        'notebooks',
-        'src',
-        'experiments',
-        'logs'
+        'data', 'models', 'reports', 'notebooks', 'src', 'experiments', 'logs',
+        'configs', 'tests', 'src/regression', 'src/warning', 'src/shared',
+        'experiments/regression', 'experiments/warning', 'experiments/analysis'
     ]
 
     print("📁 创建项目目录结构...")
 
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        print(f"  ✅ 创建目录: {directory}")
+    for directory in ensure_directories('.', directories):
+        print(f"  ✅ 创建目录: {os.path.relpath(directory, '.')}")
 
     # 创建必要的文件
     files_to_create = {
@@ -53,11 +52,7 @@ def create_project_structure():
 
 def save_model(model, filepath):
     """保存模型"""
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-
-    with open(filepath, 'wb') as f:
-        pickle.dump(model, f)
-
+    save_pickle(model, filepath)
     print(f"💾 模型已保存到: {filepath}")
     return True
 
@@ -68,9 +63,7 @@ def load_model(filepath):
         print(f"❌ 模型文件不存在: {filepath}")
         return None
 
-    with open(filepath, 'rb') as f:
-        model = pickle.load(f)
-
+    model = load_pickle(filepath)
     print(f"📂 模型已从 {filepath} 加载")
     return model
 
@@ -102,8 +95,7 @@ def save_results(results, filename='results.json'):
 
     results_converted = recursive_convert(results)
 
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(results_converted, f, ensure_ascii=False, indent=2)
+    save_json(results_converted, filepath)
 
     print(f"💾 结果已保存到: {filepath}")
     return filepath
@@ -117,8 +109,7 @@ def load_results(filename='results.json'):
         print(f"❌ 结果文件不存在: {filepath}")
         return None
 
-    with open(filepath, 'r', encoding='utf-8') as f:
-        results = json.load(f)
+    results = load_json(filepath)
 
     print(f"📂 结果已从 {filepath} 加载")
     return results
@@ -150,11 +141,9 @@ def plot_correlation_matrix(df, figsize=(12, 10), save_path='reports/correlation
     plt.title('特征相关系数矩阵', fontsize=16)
     plt.tight_layout()
 
-    # 保存图形
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_figure(plt.gcf(), save_path)
+    safe_close(plt.gcf())
     print(f"📊 相关系数矩阵已保存到: {save_path}")
-
-    plt.show()
     return corr
 
 
@@ -201,11 +190,9 @@ def plot_feature_distributions(df, n_cols=4, figsize=(16, 20), save_path='report
     plt.suptitle('特征分布分析', fontsize=16, y=1.02)
     plt.tight_layout()
 
-    # 保存图形
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_figure(fig, save_path)
+    safe_close(fig)
     print(f"📊 特征分布图已保存到: {save_path}")
-
-    plt.show()
 
 
 def generate_report(summary, filename='stage1_report.md'):
@@ -364,8 +351,8 @@ def plot_data_analysis(X, y, target_name='GRADE'):
 
         plt.title('特征相关系数矩阵', fontsize=16)
         plt.tight_layout()
-        plt.savefig('reports/correlation_matrix.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/correlation_matrix.png')
+        safe_close(plt.gcf())
 
         print("📊 相关系数矩阵已保存到 reports/correlation_matrix.png")
 
@@ -396,8 +383,8 @@ def plot_data_analysis(X, y, target_name='GRADE'):
 
         plt.suptitle('特征分布', fontsize=16, y=1.02)
         plt.tight_layout()
-        plt.savefig('reports/feature_distributions.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        save_figure(plt.gcf(), 'reports/feature_distributions.png')
+        safe_close(plt.gcf())
 
         print("📊 特征分布图已保存到 reports/feature_distributions.png")
 
@@ -433,8 +420,8 @@ def plot_data_analysis(X, y, target_name='GRADE'):
 
             plt.suptitle('特征与目标变量关系', fontsize=16, y=1.02)
             plt.tight_layout()
-            plt.savefig('reports/feature_target_relationships.png', dpi=300, bbox_inches='tight')
-            plt.show()
+            save_figure(plt.gcf(), 'reports/feature_target_relationships.png')
+            safe_close(plt.gcf())
 
             print("📊 特征与目标关系图已保存到 reports/feature_target_relationships.png")
 
@@ -546,10 +533,10 @@ def generate_final_report(preprocessor, trainer, analysis_results, test_size=0.2
 ## 建议与下一步
 
 ### 当前成果
-✅ 数据预处理完成  
-✅ 基础模型训练完成  
-✅ 模型评估完成  
-✅ 可视化分析完成  
+✅ 数据预处理完成
+✅ 基础模型训练完成
+✅ 模型评估完成
+✅ 可视化分析完成
 
 ### 改进建议
 1. **特征工程**: 可以考虑创建交互特征、多项式特征
