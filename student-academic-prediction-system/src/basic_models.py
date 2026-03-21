@@ -16,6 +16,8 @@ import seaborn as sns
 from sklearn.model_selection import cross_val_score, GridSearchCV
 import warnings
 
+from src.shared.plotting import save_figure, safe_close
+
 warnings.filterwarnings('ignore')
 
 
@@ -247,10 +249,8 @@ class BasicModels:
         axes[5].grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.show()
-
-        # 保存图形
-        plt.savefig('reports/model_comparison.png', dpi=300, bbox_inches='tight')
+        save_figure(fig, 'reports/model_comparison.png')
+        safe_close(fig)
         print("📊 可视化结果已保存到 reports/model_comparison.png")
 
     def cross_validation(self, X, y, cv=5):
@@ -356,7 +356,10 @@ def run_basic_model_pipeline(X_train, X_test, y_train, y_test):
     comparison_df = model_manager.compare_models()
 
     # 4. 可视化结果
-    model_manager.visualize_results(y_test, X_test)
+    try:
+        model_manager.visualize_results(y_test, X_test)
+    except Exception as exc:
+        print(f"⚠️ 可视化失败，但训练结果已保留: {exc}")
 
     # 5. 交叉验证
     cv_results = model_manager.cross_validation(X_train, y_train, cv=5)
