@@ -1,7 +1,7 @@
 {
-  "name": "随机森林_优化",
+  "name": "逻辑回归_优化",
   "test_accuracy": 0.5517241379310345,
-  "cv_mean": 0.47391304347826085,
-  "saved_time": "2026-01-09T19:09:05.147731",
-  "model_type": "RandomForestClassifier"
+  "cv_mean": 0.39601449275362316,
+  "saved_time": "2026-03-21T16:36:55.441387",
+  "model_type": "LogisticRegression"
 }

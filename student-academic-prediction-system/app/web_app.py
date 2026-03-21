@@ -2,7 +2,8 @@
 学生学业预警系统 - Web界面
 简单直观的Web应用，用于查看和交互使用预警系统
 """
-
+import matplotlib
+matplotlib.rcParams["axes.unicode_minus"] = False
 import streamlit as st
 import pandas as pd
 import numpy as np

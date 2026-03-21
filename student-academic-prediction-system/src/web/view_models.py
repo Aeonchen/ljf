@@ -132,7 +132,14 @@ def build_feature_relationship(df, feature_name, grade_column='GRADE'):
 
 def build_student_management_view(df, model, scaler, num_high_risk, grade_column='GRADE'):
     feature_columns = get_feature_columns(df, excluded_columns=[grade_column, 'STUDENT ID', 'COURSE ID'])
-    X = df[feature_columns[:10]]
+
+    # 优先使用训练时 scaler 记住的特征名
+    if hasattr(scaler, 'feature_names_in_'):
+        selected_features = list(scaler.feature_names_in_)
+    else:
+        selected_features = feature_columns[:10]
+
+    X = df[selected_features].copy()
     X_scaled = scaler.transform(X)
 
     predictions = model.predict(X_scaled)
@@ -152,7 +159,7 @@ def build_student_management_view(df, model, scaler, num_high_risk, grade_column
     ).head(num_high_risk)
 
     return {
-        'feature_columns': feature_columns,
+        'feature_columns': selected_features,
         'results_df': results_df,
         'high_risk_df': high_risk_df,
     }
@@ -160,16 +167,23 @@ def build_student_management_view(df, model, scaler, num_high_risk, grade_column
 
 def get_single_prediction_feature_fields():
     return [
-        [('feature_29', '特征29'), ('feature_14', '特征14')],
-        [('feature_28', '特征28'), ('feature_12', '特征12')],
-        [('feature_11', '特征11'), ('feature_9', '特征9')],
-        [('feature_5', '特征5'), ('feature_3', '特征3')],
+        [('29', '特征29'), ('14', '特征14')],
+        [('28', '特征28'), ('12', '特征12')],
+        [('11', '特征11'), ('9', '特征9')],
+        [('5', '特征5'), ('3', '特征3')],
     ]
 
 
 def build_single_prediction_result(features, model, scaler):
-    feature_vector = np.array([list(features.values())])
-    feature_scaled = scaler.transform(feature_vector)
+    if hasattr(scaler, 'feature_names_in_'):
+        selected_features = list(scaler.feature_names_in_)
+    else:
+        selected_features = list(features.keys())
+
+    feature_data = {col: features.get(col, 0.0) for col in selected_features}
+    feature_df = pd.DataFrame([feature_data])
+
+    feature_scaled = scaler.transform(feature_df)
     prediction = model.predict(feature_scaled)[0]
     probabilities = model.predict_proba(feature_scaled)[0]
 
@@ -179,7 +193,6 @@ def build_single_prediction_result(features, model, scaler):
         'probabilities': probabilities,
         'recommendations': build_prediction_recommendations(prediction),
     }
-
 
 def build_prediction_probability_rows(classes, probabilities):
     probability_values = [float(probability) * 100 for probability in probabilities]

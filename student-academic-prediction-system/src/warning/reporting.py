@@ -1,5 +1,6 @@
 """预警任务的可视化、模型保存与报告输出。"""
-
+import matplotlib
+matplotlib.rcParams["axes.unicode_minus"] = False
 import json
 from datetime import datetime
 

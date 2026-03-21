@@ -1,0 +1,13 @@
+{
+  "task": "regression",
+  "model_path": "models/best_model.pkl",
+  "report_path": "reports/final_report.md",
+  "generated_at": "2026-03-21T16:41:21.035326",
+  "info_path": "models/model_info.json",
+  "data_paths": {
+    "X_train": "data/X_train.csv",
+    "X_test": "data/X_test.csv",
+    "y_train": "data/y_train.csv",
+    "y_test": "data/y_test.csv"
+  }
+}
