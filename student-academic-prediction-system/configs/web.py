@@ -9,6 +9,7 @@ APP_CONFIG = {
 }
 
 MODEL_CONFIG = {
+    'manifest_path': 'models/warning_optimized/manifest.json',
     'model_path': 'models/warning_optimized/best_model.pkl',
     'scaler_path': 'models/warning_optimized/scaler.pkl',
     'data_path': 'data/DATA (1).csv',
