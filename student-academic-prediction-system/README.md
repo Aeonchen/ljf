@@ -12,8 +12,7 @@
 ## 当前正式入口
 
 - 回归训练：`run.py`
-- 预警训练：`run_warning.py`（推荐）
-- 兼容入口：`run_warning_optimized.py`
+- 预警训练：`run_warning_optimized.py`
 - Web 应用：`app/run_web.py`
 
 ## 当前目录结构
