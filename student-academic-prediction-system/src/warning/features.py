@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest, f_classif
 import matplotlib.pyplot as plt
+from src.shared.plotting import save_figure, safe_close, ZH_FONT
 
-from src.shared.plotting import save_figure, safe_close
 
 
 def select_k_best_features(X, y_class, k=10):
@@ -28,9 +28,9 @@ def plot_feature_importance(features, scores, output_path='reports/warning_optim
     top_scores = sorted_scores[:n_show]
 
     plt.barh(range(n_show), top_scores[::-1], color='#3498db')
-    plt.yticks(range(n_show), top_features[::-1])
-    plt.xlabel('特征重要性分数')
-    plt.title(f'Top {n_show} 重要特征')
+    plt.yticks(range(n_show), top_features[::-1], fontproperties=ZH_FONT)
+    plt.xlabel('特征重要性分数', fontproperties=ZH_FONT)
+    plt.title(f'Top {n_show} 重要特征', fontproperties=ZH_FONT)
     plt.grid(True, alpha=0.3)
 
     for index, score in enumerate(top_scores[::-1]):

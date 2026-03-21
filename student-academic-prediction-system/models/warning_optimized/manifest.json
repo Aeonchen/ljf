@@ -2,7 +2,7 @@
   "task": "warning",
   "model_path": "models/warning_optimized/best_model.pkl",
   "report_path": "reports/warning_optimized/detailed_report.md",
-  "generated_at": "2026-03-21T16:36:55.444579",
+  "generated_at": "2026-03-21T21:14:02.347838",
   "scaler_path": "models/warning_optimized/scaler.pkl",
   "manifest_version": "1.0",
   "thresholds": {

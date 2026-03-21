@@ -12,6 +12,7 @@ import seaborn as sns
 from datetime import datetime
 import sys
 from pathlib import Path
+from src.shared.plotting import ZH_FONT
 
 CURRENT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = CURRENT_DIR.parent
@@ -181,9 +182,9 @@ if page == "📊 仪表板":
         with col1:
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.hist(df['GRADE'], bins=20, edgecolor='black', alpha=0.7, color='#3B82F6')
-            ax.set_xlabel('成绩')
-            ax.set_ylabel('学生人数')
-            ax.set_title('学生成绩分布')
+            ax.set_xlabel('成绩', fontproperties=ZH_FONT)
+            ax.set_ylabel('学生人数', fontproperties=ZH_FONT)
+            ax.set_title('学生成绩分布', fontproperties=ZH_FONT)
             ax.grid(True, alpha=0.3)
             st.pyplot(fig)
 
@@ -197,7 +198,9 @@ if page == "📊 仪表板":
                 autopct='%1.1f%%',
                 colors=risk_distribution['colors'],
                 startangle=90,
+                textprops={'fontproperties': ZH_FONT}
             )
+            ax.set_title('风险类别分布', fontproperties=ZH_FONT)
             ax.set_title('风险类别分布')
             st.pyplot(fig)
 

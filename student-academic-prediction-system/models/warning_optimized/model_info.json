@@ -2,6 +2,6 @@
   "name": "逻辑回归_优化",
   "test_accuracy": 0.5517241379310345,
   "cv_mean": 0.39601449275362316,
-  "saved_time": "2026-03-21T16:36:55.441387",
+  "saved_time": "2026-03-21T21:14:02.343639",
   "model_type": "LogisticRegression"
 }

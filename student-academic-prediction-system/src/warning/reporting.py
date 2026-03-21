@@ -12,7 +12,7 @@ import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
 
 from src.shared.io import save_json, save_text
-from src.shared.plotting import save_figure, safe_close
+from src.shared.plotting import save_figure, safe_close, ZH_FONT
 
 
 
@@ -23,15 +23,15 @@ def plot_risk_distribution(y_class, output_path='reports/warning_optimized/risk_
 
     ax = plt.subplot(1, 2, 1)
     bars = plt.bar(counts.index, counts.values, color=[colors[risk] for risk in counts.index])
-    plt.title('风险类别分布')
-    plt.ylabel('学生人数')
+    plt.title('风险类别分布', fontproperties=ZH_FONT)
+    plt.ylabel('学生人数', fontproperties=ZH_FONT)
     for bar in bars:
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width() / 2., height, f'{int(height)}', ha='center', va='bottom')
 
     plt.subplot(1, 2, 2)
     plt.pie(counts.values, labels=counts.index, autopct='%1.1f%%', colors=[colors[risk] for risk in counts.index])
-    plt.title('风险类别占比')
+    plt.title('风险类别占比', fontproperties=ZH_FONT)
     plt.tight_layout()
     save_figure(fig, output_path)
     safe_close(fig)
@@ -47,8 +47,8 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
 
     test_acc = [float(x) for x in df_comparison['测试准确率']]
     bars1 = axes[0, 0].barh(models, test_acc, color=colors)
-    axes[0, 0].set_xlabel('测试准确率')
-    axes[0, 0].set_title('模型测试准确率对比')
+    axes[0, 0].set_xlabel('测试准确率', fontproperties=ZH_FONT)
+    axes[0, 0].set_title('模型测试准确率对比', fontproperties=ZH_FONT)
     axes[0, 0].axvline(x=0.5, color='red', linestyle='--', alpha=0.5, label='基准线')
     for bar in bars1:
         width = bar.get_width()
@@ -56,14 +56,14 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
 
     overfit = [float(x) for x in df_comparison['过拟合程度']]
     axes[0, 1].barh(models, overfit, color=colors)
-    axes[0, 1].set_xlabel('过拟合程度 (训练-测试)')
-    axes[0, 1].set_title('模型过拟合程度')
+    axes[0, 1].set_xlabel('过拟合程度 (训练-测试)', fontproperties=ZH_FONT)
+    axes[0, 1].set_title('模型过拟合程度', fontproperties=ZH_FONT)
     axes[0, 1].axvline(x=0, color='green', linestyle='--', alpha=0.5)
 
     f1_scores = [float(x) for x in df_comparison['F1分数']]
     axes[1, 0].barh(models, f1_scores, color=colors)
-    axes[1, 0].set_xlabel('F1分数')
-    axes[1, 0].set_title('模型F1分数对比')
+    axes[1, 0].set_xlabel('F1分数', fontproperties=ZH_FONT)
+    axes[1, 0].set_title('模型F1分数对比', fontproperties=ZH_FONT)
 
     cv_means = []
     cv_stds = []
@@ -79,9 +79,9 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
 
     x_pos = np.arange(len(models))
     axes[1, 1].bar(x_pos, cv_means, yerr=cv_stds, capsize=5, color=colors, alpha=0.7)
-    axes[1, 1].set_xlabel('模型')
-    axes[1, 1].set_ylabel('交叉验证准确率')
-    axes[1, 1].set_title('交叉验证结果（均值±标准差）')
+    axes[1, 1].set_xlabel('模型', fontproperties=ZH_FONT)
+    axes[1, 1].set_ylabel('交叉验证准确率', fontproperties=ZH_FONT)
+    axes[1, 1].set_title('交叉验证结果（均值±标准差）', fontproperties=ZH_FONT)
     axes[1, 1].set_xticks(x_pos)
     axes[1, 1].set_xticklabels(models, rotation=45, ha='right')
     axes[1, 1].axhline(y=0.5, color='red', linestyle='--', alpha=0.5)
@@ -96,9 +96,9 @@ def plot_confusion_matrix(y_true, y_pred, output_path='reports/warning_optimized
     cm = confusion_matrix(y_true, y_pred)
     fig = plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=np.unique(y_true), yticklabels=np.unique(y_true))
-    plt.title('混淆矩阵')
-    plt.ylabel('真实标签')
-    plt.xlabel('预测标签')
+    plt.title('混淆矩阵', fontproperties=ZH_FONT)
+    plt.ylabel('真实标签', fontproperties=ZH_FONT)
+    plt.xlabel('预测标签', fontproperties=ZH_FONT)
     plt.tight_layout()
     save_figure(fig, output_path)
     safe_close(fig)
@@ -115,9 +115,9 @@ def plot_high_risk_analysis(high_risk_students, X_all, output_path='reports/warn
 
     plt.subplot(2, 2, 1)
     plt.hist(high_risk_probs, bins=10, edgecolor='black', alpha=0.7, color='#ff6b6b')
-    plt.xlabel('高风险概率')
-    plt.ylabel('学生数量')
-    plt.title('高风险学生概率分布')
+    plt.xlabel('高风险概率', fontproperties=ZH_FONT)
+    plt.ylabel('学生数量', fontproperties=ZH_FONT)
+    plt.title('高风险学生概率分布', fontproperties=ZH_FONT)
     plt.grid(True, alpha=0.3)
 
     sample_student = high_risk_students[0]
@@ -126,23 +126,23 @@ def plot_high_risk_analysis(high_risk_students, X_all, output_path='reports/warn
     colors = ['#ff6b6b', '#ffd166', '#06d6a0']
     plt.subplot(2, 2, 2)
     plt.bar(risk_labels, risk_probs, color=colors, alpha=0.7)
-    plt.ylabel('概率')
-    plt.title(f"学生 {sample_student['学生ID']} 的风险分布")
+    plt.ylabel('概率', fontproperties=ZH_FONT)
+    plt.title(f"学生 {sample_student['学生ID']} 的风险分布", fontproperties=ZH_FONT)
 
     plt.subplot(2, 2, 3)
     plt.scatter(range(len(feature_means)), feature_means, alpha=0.6, color='#3498db')
     plt.axhline(y=X_all.mean().mean(), color='red', linestyle='--', label='全体平均')
-    plt.xlabel('学生排名')
-    plt.ylabel('特征均值')
-    plt.title('高风险学生特征均值')
+    plt.xlabel('学生排名', fontproperties=ZH_FONT)
+    plt.ylabel('特征均值', fontproperties=ZH_FONT)
+    plt.title('高风险学生特征均值', fontproperties=ZH_FONT)
     plt.legend()
     plt.grid(True, alpha=0.3)
 
     plt.subplot(2, 2, 4)
     plt.scatter(feature_means, high_risk_probs, alpha=0.6, color='#9b59b6')
-    plt.xlabel('特征均值')
-    plt.ylabel('高风险概率')
-    plt.title('特征均值 vs 高风险概率')
+    plt.xlabel('特征均值', fontproperties=ZH_FONT)
+    plt.ylabel('高风险概率', fontproperties=ZH_FONT)
+    plt.title('特征均值 vs 高风险概率', fontproperties=ZH_FONT)
     if len(feature_means) > 1:
         coefficients = np.polyfit(feature_means, high_risk_probs, 1)
         line = np.poly1d(coefficients)
