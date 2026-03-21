@@ -8,7 +8,6 @@ from configs.training import TEST_SIZE
 from src import utils
 from src.data_preprocessing import DataPreprocessor, check_data_compatibility
 from src.regression.trainer import run_regression_training
-from src.shared.artifacts import build_manifest, save_manifest
 from src.shared.io import save_dataframe, save_json, save_pickle, save_text
 
 
@@ -87,21 +86,5 @@ def main():
     print('2. 模型文件: models/best_model.pkl, models/model_info.json')
     print('3. 可视化文件: reports/ 目录下的所有PNG文件')
     print(f'4. 最终报告: {report_path}')
-    save_manifest(
-        build_manifest(
-            task='regression',
-            model_path='models/best_model.pkl',
-            report_path=report_path,
-            info_path='models/model_info.json',
-            data_paths={
-                'X_train': 'data/X_train.csv',
-                'X_test': 'data/X_test.csv',
-                'y_train': 'data/y_train.csv',
-                'y_test': 'data/y_test.csv',
-            },
-        ),
-        'models/regression_manifest.json',
-    )
-
     print('\n🎯 下一步:')
     print('阶段2：特征工程 + 宽度学习模型')
