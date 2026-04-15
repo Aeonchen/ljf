@@ -8,6 +8,19 @@ from matplotlib import font_manager
 import matplotlib.pyplot as plt
 
 
+_FALLBACK_FONT_NAMES = [
+    "Noto Sans CJK SC",
+    "Noto Sans CJK JP",
+    "WenQuanYi Zen Hei",
+    "Source Han Sans SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    "SimHei",
+    "Arial Unicode MS",
+    "DejaVu Sans",
+]
+
+
 def _load_chinese_font():
     candidate_font_paths = [
         # Windows
@@ -61,6 +74,21 @@ def _load_chinese_font():
 
 
 ZH_FONT = _load_chinese_font()
+
+
+def apply_plot_defaults():
+    """统一设置绘图字体，避免被 seaborn/style 覆盖成 Arial。"""
+    primary_font = ZH_FONT.get_name() if ZH_FONT is not None else _FALLBACK_FONT_NAMES[0]
+    merged = [primary_font, *_FALLBACK_FONT_NAMES]
+    # 去重并保持顺序
+    merged = list(dict.fromkeys(merged))
+
+    matplotlib.rcParams["font.family"] = "sans-serif"
+    matplotlib.rcParams["font.sans-serif"] = merged
+    matplotlib.rcParams["axes.unicode_minus"] = False
+
+
+apply_plot_defaults()
 
 
 def save_figure(fig, path, dpi=300, bbox_inches='tight'):

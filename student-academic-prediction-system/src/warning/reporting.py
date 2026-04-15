@@ -12,11 +12,12 @@ import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
 
 from src.shared.io import save_json, save_text
-from src.shared.plotting import save_figure, safe_close, ZH_FONT
+from src.shared.plotting import apply_plot_defaults, save_figure, safe_close, ZH_FONT
 
 
 
 def plot_risk_distribution(y_class, output_path='reports/warning_optimized/risk_distribution.png'):
+    apply_plot_defaults()
     fig = plt.figure(figsize=(10, 6))
     colors = {'高风险': '#ff6b6b', '中风险': '#ffd166', '低风险': '#06d6a0'}
     counts = y_class.value_counts()
@@ -30,7 +31,13 @@ def plot_risk_distribution(y_class, output_path='reports/warning_optimized/risk_
         plt.text(bar.get_x() + bar.get_width() / 2., height, f'{int(height)}', ha='center', va='bottom')
 
     plt.subplot(1, 2, 2)
-    plt.pie(counts.values, labels=counts.index, autopct='%1.1f%%', colors=[colors[risk] for risk in counts.index])
+    plt.pie(
+        counts.values,
+        labels=counts.index,
+        autopct='%1.1f%%',
+        colors=[colors[risk] for risk in counts.index],
+        textprops={'fontproperties': ZH_FONT},
+    )
     plt.title('风险类别占比', fontproperties=ZH_FONT)
     plt.tight_layout()
     save_figure(fig, output_path)
@@ -39,8 +46,10 @@ def plot_risk_distribution(y_class, output_path='reports/warning_optimized/risk_
 
 
 def plot_model_comparison(comparison_data, output_path='reports/warning_optimized/model_comparison.png'):
+    apply_plot_defaults()
     df_comparison = pd.DataFrame(comparison_data)
     plt.style.use('seaborn-v0_8-darkgrid')
+    apply_plot_defaults()
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
     models = df_comparison['模型']
     colors = plt.cm.Set3(np.linspace(0, 1, len(models)))
@@ -99,6 +108,7 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
 
 
 def plot_confusion_matrix(y_true, y_pred, output_path='reports/warning_optimized/confusion_matrix.png'):
+    apply_plot_defaults()
     cm = confusion_matrix(y_true, y_pred)
     fig = plt.figure(figsize=(8, 6))
     ax = sns.heatmap(
@@ -123,6 +133,8 @@ def plot_confusion_matrix(y_true, y_pred, output_path='reports/warning_optimized
 def plot_high_risk_analysis(high_risk_students, X_all, output_path='reports/warning_optimized/high_risk_analysis.png'):
     if not high_risk_students:
         return
+
+    apply_plot_defaults()
 
     high_risk_probs = [student['高风险概率'] for student in high_risk_students]
     feature_means = [student['特征均值'] for student in high_risk_students]
@@ -150,7 +162,7 @@ def plot_high_risk_analysis(high_risk_students, X_all, output_path='reports/warn
     plt.xlabel('学生排名', fontproperties=ZH_FONT)
     plt.ylabel('特征均值', fontproperties=ZH_FONT)
     plt.title('高风险学生特征均值', fontproperties=ZH_FONT)
-    plt.legend()
+    plt.legend(prop=ZH_FONT)
     plt.grid(True, alpha=0.3)
 
     plt.subplot(2, 2, 4)
