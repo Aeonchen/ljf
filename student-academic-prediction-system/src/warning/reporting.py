@@ -53,17 +53,23 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
     for bar in bars1:
         width = bar.get_width()
         axes[0, 0].text(width, bar.get_y() + bar.get_height() / 2, f'{width:.3f}', ha='left', va='center')
+    for label in axes[0, 0].get_yticklabels():
+        label.set_fontproperties(ZH_FONT)
 
     overfit = [float(x) for x in df_comparison['过拟合程度']]
     axes[0, 1].barh(models, overfit, color=colors)
     axes[0, 1].set_xlabel('过拟合程度 (训练-测试)', fontproperties=ZH_FONT)
     axes[0, 1].set_title('模型过拟合程度', fontproperties=ZH_FONT)
     axes[0, 1].axvline(x=0, color='green', linestyle='--', alpha=0.5)
+    for label in axes[0, 1].get_yticklabels():
+        label.set_fontproperties(ZH_FONT)
 
     f1_scores = [float(x) for x in df_comparison['F1分数']]
     axes[1, 0].barh(models, f1_scores, color=colors)
     axes[1, 0].set_xlabel('F1分数', fontproperties=ZH_FONT)
     axes[1, 0].set_title('模型F1分数对比', fontproperties=ZH_FONT)
+    for label in axes[1, 0].get_yticklabels():
+        label.set_fontproperties(ZH_FONT)
 
     cv_means = []
     cv_stds = []
@@ -83,7 +89,7 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
     axes[1, 1].set_ylabel('交叉验证准确率', fontproperties=ZH_FONT)
     axes[1, 1].set_title('交叉验证结果（均值±标准差）', fontproperties=ZH_FONT)
     axes[1, 1].set_xticks(x_pos)
-    axes[1, 1].set_xticklabels(models, rotation=45, ha='right')
+    axes[1, 1].set_xticklabels(models, rotation=45, ha='right', fontproperties=ZH_FONT)
     axes[1, 1].axhline(y=0.5, color='red', linestyle='--', alpha=0.5)
 
     plt.tight_layout()
@@ -95,10 +101,19 @@ def plot_model_comparison(comparison_data, output_path='reports/warning_optimize
 def plot_confusion_matrix(y_true, y_pred, output_path='reports/warning_optimized/confusion_matrix.png'):
     cm = confusion_matrix(y_true, y_pred)
     fig = plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=np.unique(y_true), yticklabels=np.unique(y_true))
-    plt.title('混淆矩阵', fontproperties=ZH_FONT)
-    plt.ylabel('真实标签', fontproperties=ZH_FONT)
-    plt.xlabel('预测标签', fontproperties=ZH_FONT)
+    ax = sns.heatmap(
+        cm,
+        annot=True,
+        fmt='d',
+        cmap='Blues',
+        xticklabels=np.unique(y_true),
+        yticklabels=np.unique(y_true),
+    )
+    ax.set_title('混淆矩阵', fontproperties=ZH_FONT)
+    ax.set_ylabel('真实标签', fontproperties=ZH_FONT)
+    ax.set_xlabel('预测标签', fontproperties=ZH_FONT)
+    ax.set_xticklabels(ax.get_xticklabels(), fontproperties=ZH_FONT, rotation=0)
+    ax.set_yticklabels(ax.get_yticklabels(), fontproperties=ZH_FONT, rotation=0)
     plt.tight_layout()
     save_figure(fig, output_path)
     safe_close(fig)
