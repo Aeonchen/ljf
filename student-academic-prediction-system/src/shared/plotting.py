@@ -55,7 +55,17 @@ def _load_chinese_font():
         return font_prop
 
     # 如果未命中具体文件路径，回退为常见中文字体名，让 Matplotlib 自行匹配。
-    fallback_names = _FALLBACK_FONT_NAMES
+    fallback_names = [
+        "Noto Sans CJK SC",
+        "Noto Sans CJK JP",
+        "WenQuanYi Zen Hei",
+        "Source Han Sans SC",
+        "PingFang SC",
+        "Microsoft YaHei",
+        "SimHei",
+        "Arial Unicode MS",
+        "DejaVu Sans",
+    ]
     matplotlib.rcParams["font.family"] = "sans-serif"
     matplotlib.rcParams["font.sans-serif"] = fallback_names
     matplotlib.rcParams["axes.unicode_minus"] = False
