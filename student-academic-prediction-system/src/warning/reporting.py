@@ -215,15 +215,16 @@ def save_warning_artifacts(best_model, scaler, output_dir='models/warning_optimi
 
 
 def generate_warning_report(system, high_risk_students, report_path='reports/warning_optimized/detailed_report.md'):
+    sample_count = int(len(system.y)) if hasattr(system, 'y') else 0
     report_content = f"""# 学生学业预警系统 - 优化版报告
 
 ## 报告信息
 - 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-- 数据来源: 145名学生的学业数据
+- 数据来源: {sample_count}名学生的学业数据
 - 版本: 优化版（减少过拟合，增加交叉验证）
 
 ## 数据概况
-- 总样本数: 145名学生
+- 总样本数: {sample_count}名学生
 - 成绩范围: 0-7分
 - 平均成绩: {system.y.mean() if hasattr(system, 'y') else 'N/A':.2f}
 
